@@ -11,7 +11,8 @@
     "productName": "Dumb Chat",
     "mac": {
       "category": "public.app-category.social-networking",
-      "target": "dmg"
+      "target": "dmg",
+      "icon": "build/icons/icon.icns"
     },
     "dmg": {
       "background": null,
@@ -44,6 +45,9 @@
   "description": "",
   "dependencies": {
     "firebase": "^11.6.0"
+  },
+  "overrides": {
+    "@xmldom/xmldom": "0.8.13"
   },
   "devDependencies": {
     "electron": "^35.1.5",
