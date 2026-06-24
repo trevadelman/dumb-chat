@@ -1,9 +1,6 @@
 <script lang="ts">
   import type { NotificationSettings, UserName } from "../types";
-  import {
-    ensureNotificationPermission,
-    openSystemNotificationSettings,
-  } from "../native";
+  import { ensureNotificationPermission } from "../native";
 
   interface Props {
     currentUser: UserName;
@@ -92,6 +89,10 @@
         <input type="checkbox" bind:checked={settings.sound} onchange={update} />
         Sound Notifications
       </label>
+      <button class="icon-btn" onclick={testSound} title="Test notification sound"
+        >(🔊 test)</button
+      >
+
     </div>
     <div class="setting-item">
       <label>
@@ -99,19 +100,9 @@
         Badge Notifications
       </label>
     </div>
-    <div class="setting-item">
-      <button class="test-btn" onclick={testSound}
-        >🔊 Test Notification Sound</button
-      >
-    </div>
-    <div class="setting-item">
-      <button class="test-btn" onclick={openSystemNotificationSettings}
-        >⚙️ Open System Settings</button
-      >
-    </div>
   </div>
-  <div class="settings-section">
-    <h3>Formatting & Shortcuts</h3>
+  <details class="settings-section accordion">
+    <summary><h3>Formatting & Shortcuts</h3></summary>
     <div class="shortcut">
       <span>Bold</span>
       <span class="shortcut-key">Cmd/Ctrl + B</span>
@@ -145,8 +136,9 @@
       <span class="shortcut-key">```code```</span>
     </div>
     <p class="hint">Double-click your message to edit · right-click to edit or delete.</p>
-  </div>
+  </details>
 </div>
+
 
 <style>
   .settings-dropdown {
@@ -221,6 +213,39 @@
     padding: 0 0 8px 0;
     border-bottom: none;
   }
+  .accordion {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .accordion summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 0;
+    user-select: none;
+  }
+  .accordion summary::-webkit-details-marker {
+    display: none;
+  }
+  .accordion summary h3 {
+    padding: 0;
+  }
+  .accordion summary::before {
+    content: "▶";
+    color: var(--text-color);
+    font-size: 11px;
+    transition: var(--transition);
+  }
+  .accordion[open] summary::before {
+    transform: rotate(90deg);
+  }
+
+  .accordion[open] {
+    padding-bottom: 14px;
+  }
+
   .user-select label {
     display: block;
     margin-bottom: 8px;
@@ -243,7 +268,12 @@
   }
   .setting-item {
     margin: 10px 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
   }
+
   .setting-item label {
     display: flex;
     align-items: center;
@@ -257,26 +287,24 @@
     height: 16px;
     cursor: pointer;
   }
-  .test-btn {
-    background-color: var(--primary-color);
-    color: white;
+  .icon-btn {
+    flex-shrink: 0;
+    background: none;
     border: none;
-    border-radius: var(--radius-sm);
-    padding: 10px 14px;
-    font-size: 14px;
+    padding: 2px 4px;
+    font-size: 12px;
+    color: var(--light-text);
+    line-height: 1;
     cursor: pointer;
+    opacity: 0.7;
     transition: var(--transition);
-    width: 100%;
-    text-align: center;
-    margin: 5px 0;
-    font-weight: 500;
-    box-shadow: var(--shadow-sm);
+    white-space: nowrap;
   }
-  .test-btn:hover {
-    background-color: #2a75f3;
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+  .icon-btn:hover {
+    opacity: 1;
+    transform: scale(1.15);
   }
+
   .shortcut {
     display: flex;
     justify-content: space-between;

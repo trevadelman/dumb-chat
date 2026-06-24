@@ -208,6 +208,10 @@
   onclick={closeDropdowns}
 />
 
+<!-- Draggable region under the overlay titlebar so the window can still be
+     moved by dragging the top strip (where the traffic lights float). -->
+<div class="titlebar-drag" data-tauri-drag-region></div>
+
 <button
   class="settings-fab"
   class:active={settingsOpen}
@@ -255,6 +259,20 @@
 {/if}
 
 <style>
+  /* Transparent strip overlaying the very top of the content. It does not push
+     content down (no black bar); it just gives the OS traffic lights (from
+     titleBarStyle: Overlay) a place to float and makes the top draggable.
+     In wry, ONLY the data-tauri-drag-region attribute enables window dragging —
+     the -webkit-app-region CSS property is a no-op here. */
+  .titlebar-drag {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 28px;
+    z-index: 60;
+  }
+
   .chat-container {
     flex: 1;
     display: flex;
@@ -262,6 +280,7 @@
     height: 100vh;
     position: relative;
   }
+
 
   .settings-fab {
     position: fixed;
