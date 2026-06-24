@@ -1,4 +1,0 @@
-- message input not resizing to normal after send
-- massage input scrollbar 
-- flicker reload on chat update
-- infinite scroll to only load last 50 messages unless asked for more
