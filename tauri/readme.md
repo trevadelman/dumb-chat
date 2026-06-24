@@ -122,6 +122,14 @@ curl -sL https://github.com/trevadelman/dumb-chat/releases/latest/download/lates
 ```
 
 
+## Window behavior
+
+Closing the window (red button or Cmd+W) **hides** it rather than quitting,
+mirroring the original Electron app. The app keeps running in the background;
+clicking the dock icon re-shows and focuses the window. To fully quit, use
+Cmd+Q or right-click the dock icon → Quit. This is implemented in
+`src-tauri/src/lib.rs` via the `CloseRequested` and `Reopen` events.
+
 ## Notes
 
 - Currently builds for `aarch64` (Apple Silicon) only. For Intel/universal,
