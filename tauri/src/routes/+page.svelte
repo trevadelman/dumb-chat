@@ -135,6 +135,24 @@
     saveNotificationSettings(next);
   }
 
+  // Manual update check triggered from Settings. Reuses the same flow as the
+  // launch check: a found update populates `pendingUpdate` so the existing
+  // UpdateBanner appears. Returns a short status string for the button to show.
+  async function onCheckForUpdate(): Promise<string> {
+    try {
+      const update = await checkForUpdate();
+      if (update) {
+        pendingUpdate = update;
+        return `Update available: v${update.version}`;
+      }
+      return "You're up to date";
+    } catch (e) {
+      console.error("Update check failed:", e);
+      return "Update check failed";
+    }
+  }
+
+
   async function onSend(
     text: string,
     image: { data: string; type: string; sizeMb: number } | null,
@@ -213,6 +231,7 @@
       {notificationSound}
       {onUserChange}
       {onSettingsChange}
+      {onCheckForUpdate}
     />
   {/if}
 

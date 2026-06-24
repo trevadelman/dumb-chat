@@ -11,6 +11,7 @@
     notificationSound: HTMLAudioElement;
     onUserChange: (user: UserName) => void;
     onSettingsChange: (settings: NotificationSettings) => void;
+    onCheckForUpdate: () => Promise<string>;
   }
 
   let {
@@ -19,7 +20,19 @@
     notificationSound,
     onUserChange,
     onSettingsChange,
+    onCheckForUpdate,
   }: Props = $props();
+
+  let checkingUpdate = $state(false);
+  let updateStatus = $state("");
+
+  async function checkForUpdates() {
+    checkingUpdate = true;
+    updateStatus = "Checking...";
+    updateStatus = await onCheckForUpdate();
+    checkingUpdate = false;
+  }
+
 
   function selectUser(e: Event) {
     onUserChange((e.target as HTMLSelectElement).value as UserName);
@@ -42,7 +55,19 @@
 </script>
 
 <div class="settings-dropdown" onclick={(e) => e.stopPropagation()} role="menu" tabindex="-1">
-  <h3>Current User: <span>{currentUser}</span></h3>
+  <div class="header-row">
+    <h3>Current User: <span>{currentUser}</span></h3>
+    <button
+      class="update-btn"
+      onclick={checkForUpdates}
+      disabled={checkingUpdate}
+      title="Check for updates">🔄 Updates</button
+    >
+  </div>
+  {#if updateStatus}
+    <p class="update-status">{updateStatus}</p>
+  {/if}
+
   <div class="user-select">
     <label for="user-select">Select User</label>
     <select id="user-select" value={currentUser} onchange={selectUser}>
@@ -123,7 +148,6 @@
   </div>
 </div>
 
-
 <style>
   .settings-dropdown {
     position: absolute;
@@ -147,6 +171,47 @@
     border-bottom: 1px solid var(--border-color);
     font-weight: 500;
   }
+  .header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-right: 12px;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .header-row h3 {
+    border-bottom: none;
+    flex: 1;
+  }
+  .update-btn {
+    flex-shrink: 0;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+  }
+  .update-btn:hover:not(:disabled) {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+  }
+  .update-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .update-status {
+    margin: 0;
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--light-text);
+    border-bottom: 1px solid var(--border-color);
+  }
+
   .user-select,
   .settings-section {
     padding: 14px 16px;
