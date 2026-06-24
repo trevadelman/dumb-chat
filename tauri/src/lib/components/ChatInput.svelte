@@ -27,10 +27,21 @@
   let fileInput: HTMLInputElement | undefined = $state();
   let overlay: HTMLDivElement | undefined = $state();
 
-  // Misspelled ranges for the current text, plus a token list the overlay
-  // renders so each bad word can get a red squiggle underline.
-  let misspellings = $state<Misspelling[]>([]);
+  // All misspelled ranges for the current text. The visible set (`misspellings`)
+  // omits the word the caret is currently in, so you don't see a squiggle while
+  // still typing a word.
+  let allMisspellings = $state<Misspelling[]>([]);
+  let caret = $state(-1);
   let scrollTop = $state(0);
+
+  // Only suppress the underline on the word being actively typed, i.e. when the
+  // caret is at the trailing edge of the word (you're still appending to it).
+  // This mirrors Word/macOS: once you move past the word or click back into the
+  // middle of it to fix a typo, the squiggle stays visible.
+  let misspellings = $derived.by<Misspelling[]>(() =>
+    caret < 0 ? allMisspellings : allMisspellings.filter((m) => caret !== m.end),
+  );
+
 
   interface Segment {
     text: string;
@@ -40,6 +51,7 @@
   // Splits the text into alternating plain/misspelled segments for rendering.
   let segments = $derived.by<Segment[]>(() => {
     if (misspellings.length === 0) return [{ text, bad: false }];
+
     const out: Segment[] = [];
     let cursor = 0;
     for (const m of misspellings) {
@@ -53,18 +65,24 @@
     return out;
   });
 
+  // Keep the caret position in sync so the derived `misspellings` can omit the
+  // word being typed.
+  function syncCaret() {
+    caret = textarea?.selectionStart ?? -1;
+  }
+
   // Re-run spell checking after edits; debounced so typing stays snappy.
   let recheckTimer: ReturnType<typeof setTimeout> | undefined;
   function scheduleRecheck() {
     clearTimeout(recheckTimer);
     recheckTimer = setTimeout(() => {
-      misspellings = findMisspellings(text);
+      allMisspellings = findMisspellings(text);
     }, 150);
   }
 
   onMount(() => {
     loadSpellChecker().then(() => {
-      misspellings = findMisspellings(text);
+      allMisspellings = findMisspellings(text);
     });
   });
 
@@ -76,12 +94,14 @@
 
   function onInput() {
     autosize();
+    syncCaret();
     scheduleRecheck();
   }
 
   function syncScroll() {
     if (textarea) scrollTop = textarea.scrollTop;
   }
+
 
 
   function send() {
@@ -207,6 +227,9 @@
       spellcheck="true"
       oninput={onInput}
       onkeydown={onKeydown}
+      onkeyup={syncCaret}
+      onclick={syncCaret}
+      onselect={syncCaret}
       onpaste={onPaste}
       onscroll={syncScroll}
     ></textarea>
