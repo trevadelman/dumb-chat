@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Dumb Chat",
-  "version": "1.0.1",
+  "version": "1.0.2",
 
   "identifier": "com.dumbchat.app",
   "build": {
@@ -14,8 +14,11 @@
     "windows": [
       {
         "title": "Dumb Chat",
-        "width": 800,
-        "height": 600
+        "width": 480,
+        "height": 800,
+        "minWidth": 380,
+        "minHeight": 600,
+        "center": true
       }
 
     ],
