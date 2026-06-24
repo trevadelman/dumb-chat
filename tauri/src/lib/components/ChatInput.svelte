@@ -1,4 +1,11 @@
 <script lang="ts">
+  import { onMount } from "svelte";
+  import {
+    loadSpellChecker,
+    findMisspellings,
+    type Misspelling,
+  } from "$lib/spellcheck";
+
   interface PendingImage {
     data: string;
     type: string;
@@ -18,12 +25,64 @@
   let pendingImage = $state<PendingImage | null>(null);
   let textarea: HTMLTextAreaElement | undefined = $state();
   let fileInput: HTMLInputElement | undefined = $state();
+  let overlay: HTMLDivElement | undefined = $state();
+
+  // Misspelled ranges for the current text, plus a token list the overlay
+  // renders so each bad word can get a red squiggle underline.
+  let misspellings = $state<Misspelling[]>([]);
+  let scrollTop = $state(0);
+
+  interface Segment {
+    text: string;
+    bad: boolean;
+  }
+
+  // Splits the text into alternating plain/misspelled segments for rendering.
+  let segments = $derived.by<Segment[]>(() => {
+    if (misspellings.length === 0) return [{ text, bad: false }];
+    const out: Segment[] = [];
+    let cursor = 0;
+    for (const m of misspellings) {
+      if (m.start > cursor)
+        out.push({ text: text.slice(cursor, m.start), bad: false });
+      out.push({ text: text.slice(m.start, m.end), bad: true });
+      cursor = m.end;
+    }
+    if (cursor < text.length)
+      out.push({ text: text.slice(cursor), bad: false });
+    return out;
+  });
+
+  // Re-run spell checking after edits; debounced so typing stays snappy.
+  let recheckTimer: ReturnType<typeof setTimeout> | undefined;
+  function scheduleRecheck() {
+    clearTimeout(recheckTimer);
+    recheckTimer = setTimeout(() => {
+      misspellings = findMisspellings(text);
+    }, 150);
+  }
+
+  onMount(() => {
+    loadSpellChecker().then(() => {
+      misspellings = findMisspellings(text);
+    });
+  });
 
   function autosize() {
     if (!textarea) return;
     textarea.style.height = "auto";
     textarea.style.height = textarea.scrollHeight + "px";
   }
+
+  function onInput() {
+    autosize();
+    scheduleRecheck();
+  }
+
+  function syncScroll() {
+    if (textarea) scrollTop = textarea.scrollTop;
+  }
+
 
   function send() {
     if (!text.trim() && !pendingImage) return;
@@ -132,16 +191,27 @@
     bind:this={fileInput}
     onchange={onFileChange}
   />
-  <textarea
-    bind:this={textarea}
-    bind:value={text}
-    placeholder="Type a message..."
-    rows="1"
-    spellcheck="true"
-    oninput={autosize}
-    onkeydown={onKeydown}
-    onpaste={onPaste}
-  ></textarea>
+  <div class="textarea-wrap">
+    <div
+      class="spellcheck-overlay"
+      bind:this={overlay}
+      aria-hidden="true"
+      style="transform: translateY({-scrollTop}px);"
+    >{#each segments as seg}{#if seg.bad}<span class="misspelled">{seg.text}</span>{:else}{seg.text}{/if}{/each}</div>
+
+    <textarea
+      bind:this={textarea}
+      bind:value={text}
+      placeholder="Type a message..."
+      rows="1"
+      spellcheck="true"
+      oninput={onInput}
+      onkeydown={onKeydown}
+      onpaste={onPaste}
+      onscroll={syncScroll}
+    ></textarea>
+  </div>
+
   <button
     class="send-button"
     onclick={send}
@@ -165,26 +235,73 @@
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
   }
 
-  .chat-input textarea {
+  .textarea-wrap {
     flex: 1;
+    position: relative;
+    display: flex;
+  }
+
+  /* Shared box model so the overlay text lines up exactly with the textarea. */
+  .chat-input textarea,
+  .spellcheck-overlay {
+    width: 100%;
     padding: 14px 20px;
-    border: 1px solid var(--border-color);
+    border: 1px solid transparent;
     border-radius: var(--radius-lg);
-    background-color: var(--bg-color);
-    color: var(--text-color);
     font-size: 15px;
+    line-height: 1.5;
+    font-family: inherit;
+    box-sizing: border-box;
+    max-height: 120px;
+    min-height: 48px;
+  }
+
+  .chat-input textarea {
+    position: relative;
+    z-index: 1;
+    border-color: var(--border-color);
+    background-color: transparent;
+    color: var(--text-color);
     transition: var(--transition);
     resize: none;
     overflow-y: auto;
-    max-height: 120px;
-    min-height: 48px;
-    line-height: 1.5;
   }
   .chat-input textarea:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(58, 134, 255, 0.2);
   }
+
+  /* Sits behind the textarea, mirroring its text. Only misspelled words are
+     visible (as a red squiggle); everything else is transparent. */
+  .spellcheck-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    color: transparent;
+    background-color: var(--bg-color);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-y: auto;
+    overflow-x: hidden;
+    pointer-events: none;
+    user-select: none;
+  }
+  .spellcheck-overlay .misspelled {
+    /* WebKit (the engine in Tauri's WKWebView) needs the prefixed
+       text-decoration longhands; the unprefixed shorthand alone does not
+       render the wavy color reliably. */
+    -webkit-text-decoration-line: underline;
+    -webkit-text-decoration-style: wavy;
+    -webkit-text-decoration-color: var(--error-color, #ff5d5d);
+    text-decoration-line: underline;
+    text-decoration-style: wavy;
+    text-decoration-color: var(--error-color, #ff5d5d);
+    text-decoration-skip-ink: none;
+    text-underline-offset: 2px;
+  }
+
+
 
   .send-button {
     width: 44px;
