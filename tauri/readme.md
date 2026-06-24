@@ -80,20 +80,47 @@ convenience, so building only requires the key file to be present.
 
 ### Cutting a release
 
+The whole flow is scripted in `scripts/make-release.sh`. The only manual steps
+are bumping and committing the version:
+
 1. Bump `version` in `src-tauri/tauri.conf.json`.
-2. Run the release script:
+2. Commit and push that bump to `main`.
+3. Build **and publish** in one command:
    ```bash
-   ./scripts/make-release.sh
+   ./scripts/make-release.sh --publish
    ```
-   This produces, under `src-tauri/target/release/bundle/`:
-   - `dmg/Dumb Chat_<version>_aarch64.dmg` — manual download
-   - `macos/Dumb Chat.app.tar.gz` — the update payload
-   - `latest.json` — the update manifest
-3. Create a GitHub release tagged `v<version>` and upload all three. Upload the
-   tarball as **`Dumb.Chat.app.tar.gz`** so it matches the URL in `latest.json`.
+   This builds the signed bundle, generates `latest.json`, creates the
+   `v<version>` git tag, and creates the GitHub release with all assets
+   attached — the dmg, the `Dumb.Chat.app.tar.gz` update payload (+ `.sig`),
+   and `latest.json`.
+4. Verify the updater sees it (see below), then open an older install and
+   confirm it offers the update on launch.
+
+Prereqs for `--publish`: the [`gh` CLI](https://cli.github.com) installed and
+authenticated (`gh auth status`). The script refuses to run if a release for
+the current version already exists, so always bump first.
+
+**Build without publishing** (e.g. to test the bundle locally) by omitting the
+flag — it prints the manual upload list instead:
+
+```bash
+./scripts/make-release.sh
+```
+
+> **Why the tarball gets renamed to `Dumb.Chat.app.tar.gz`:** GitHub rewrites
+> spaces in uploaded asset names to dots, which would break the URL baked into
+> `latest.json`. The script renames the payload up-front so the manifest URL
+> stays stable. Don't undo this.
 
 The updater endpoint is:
 `https://github.com/trevadelman/dumb-chat/releases/latest/download/latest.json`
+
+Quick check that a release is live and well-formed:
+
+```bash
+curl -sL https://github.com/trevadelman/dumb-chat/releases/latest/download/latest.json | jq
+```
+
 
 ## Notes
 
